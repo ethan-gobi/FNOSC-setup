@@ -1,0 +1,12 @@
+- Get Help Now
+    - https://www.nors.ca/
+    - The Ontario Harm Reduction Distribution Program: 1-866-316-2217 (Phone only)
+    - NORS Safer Consumption Hotline: 1-888-688-6677 (Call or Text, 24/7)
+    - Emergency Instructions: 9-11
+    - NORS Peer Wellness Program Line: 1-844-795-6677 (Phone only)
+    - First Nations and Inuit Hope for Wellness Helpline: 1-855-242-3310 (Phone + Online Chat at hopeforwellness.ca)
+    - Crisis Text Line: Text FIRST NATIONS, INUIT, or METIS to 686868 (youth) or 741741 (adults)
+    - 9-8-8 Suicide Crisis Helpline: Call or Text 988 (24/7)
+    - Wellness Together Canada: Text WELLNESS to 741741 (adults) or 686868 (youth)
+
+- 
