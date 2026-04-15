@@ -7,8 +7,6 @@
     <link rel="stylesheet" href="stylesheet.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script defer src="/_vercel/insights/script.js"></script>
-    <script defer src="analytics.js"></script>
     <style>
         #map {
             height: 500px;
@@ -86,7 +84,7 @@
 </head>
 <body>
     <nav>
-        <a href="home.html">Home</a>
+        <a href="index.html">Home</a>
         <a href="help.html">Get Help Now</a>
         <a href="map.html">Find Support Near You</a>
     </nav>
@@ -143,7 +141,7 @@
     </section>
 
     <footer>
-        <p><a href="home.html">&larr; Back to Home</a></p>
+        <p><a href="index.html">&larr; Back to Home</a></p>
     </footer>
 
     <script>
@@ -191,17 +189,13 @@
 
         function renderGroups(supportGroups) {
             supportGroups.forEach(function (group) {
-                var dataAttrs =
-                    ' data-group-id="' + group.id + '"' +
-                    ' data-group-name="' + String(group.name).replace(/"/g, '&quot;') + '"' +
-                    ' data-group-type="' + group.type + '"';
                 var popupHtml =
                     '<b>' + group.name + '</b><br>' +
                     '<i>' + group.type + '</i><br>' +
                     group.address + '<br>' +
-                    '<a href="tel:' + group.phone + '"' + dataAttrs + '>' + group.phone + '</a><br>' +
+                    '<a href="tel:' + group.phone + '">' + group.phone + '</a><br>' +
                     (group.hours ? '<b>Hours:</b> ' + group.hours + '<br>' : '') +
-                    (group.website ? '<a href="' + group.website + '" target="_blank"' + dataAttrs + '>Visit website</a><br>' : '') +
+                    (group.website ? '<a href="' + group.website + '" target="_blank">Visit website</a><br>' : '') +
                     '<em>' + group.description + '</em>';
 
                 var marker = L.circleMarker([group.lat, group.lng], {
