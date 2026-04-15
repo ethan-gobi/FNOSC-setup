@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FNOSC Local Stats</title>
+    <link rel="stylesheet" href="stylesheet.css">
+    <style>
+        .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin: 20px 0; }
+        .stat-card { border: 2px solid #333; border-radius: 8px; padding: 15px; background: #f9f9f9; }
+        .stat-card .label { font-size: 13px; color: #555; text-transform: uppercase; }
+        .stat-card .value { font-size: 28px; font-weight: bold; margin-top: 4px; }
+        table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+        th, td { border: 1px solid #999; padding: 8px; text-align: left; font-size: 14px; }
+        th { background: #333; color: white; }
+        tr:nth-child(even) { background: #f4f4f4; }
+        .bar { background: #2ecc71; height: 8px; border-radius: 4px; }
+        .actions button { padding: 8px 14px; margin-right: 8px; border: 2px solid #333; background: white; border-radius: 5px; cursor: pointer; }
+        .actions button:hover { background: #333; color: white; }
+        .note { background: #fff4cc; border: 1px solid #e0c04a; padding: 10px; border-radius: 5px; font-size: 13px; }
+    </style>
+</head>
+<body>
+    <nav>
+        <a href="home.html">Home</a>
+        <a href="help.html">Get Help Now</a>
+        <a href="map.html">Find Support Near You</a>
+    </nav>
+
+    <h1>Local Stats Dashboard</h1>
+    <p class="note">
+        These numbers are stored only in <strong>your own browser</strong> via <code>localStorage</code>.
+        They show how you (and anyone using this same browser) have interacted with the site.
+        For aggregated stats from all real visitors after you deploy to Vercel, open your Vercel project &rarr; Analytics tab.
+    </p>
+
+    <div class="actions">
+        <button id="refresh-btn">Refresh</button>
+        <button id="export-btn">Export JSON</button>
+        <button id="reset-btn">Reset local stats</button>
+    </div>
+
+    <div class="stat-grid" id="summary"></div>
+
+    <h2>Page views &amp; click-through rate</h2>
+    <table id="page-table">
+        <thead><tr><th>Page</th><th>Views</th><th>Clicks</th><th>CTR</th><th>Max scroll</th><th>Time on page</th></tr></thead>
+        <tbody></tbody>
+    </table>
+
+    <h2>Top links clicked</h2>
+    <table id="links-table">
+        <thead><tr><th>#</th><th>Link text</th><th>Destination</th><th>Type</th><th>Section</th><th>Page</th><th>Clicks</th></tr></thead>
+        <tbody></tbody>
+    </table>
+
+    <h2>Support groups clicked (from map)</h2>
+    <table id="groups-table">
+        <thead><tr><th>#</th><th>Name</th><th>Type</th><th>Calls</th><th>Website visits</th><th>Total</th></tr></thead>
+        <tbody></tbody>
+    </table>
+
+    <h2>Sections by engagement</h2>
+    <table id="sections-table">
+        <thead><tr><th>Section</th><th>Clicks</th></tr></thead>
+        <tbody></tbody>
+    </table>
+
+    <h2>Recent events (last 50)</h2>
+    <table id="recent-table">
+        <thead><tr><th>Time</th><th>Page</th><th>Type</th><th>Text / name</th><th>Destination</th></tr></thead>
+        <tbody></tbody>
+    </table>
+
+    <footer><p><a href="home.html">&larr; Back to Home</a></p></footer>
+
+    <script defer src="analytics.js"></script>
+    <script>
+        function fmtMs(ms) {
+            if (!ms) return '0s';
+            var s = Math.round(ms / 1000);
+            if (s < 60) return s + 's';
+            var m = Math.floor(s / 60); s = s % 60;
+            if (m < 60) return m + 'm ' + s + 's';
+            var h = Math.floor(m / 60); m = m % 60;
+            return h + 'h ' + m + 'm';
+        }
+
+        function fmtTime(ts) {
+            if (!ts) return '';
+            var d = new Date(ts);
+            return d.toLocaleString();
+        }
+
+        function render() {
+            var raw = localStorage.getItem('fnosc_analytics_v1');
+            var data = raw ? JSON.parse(raw) : {
+                pageViews: {}, linkClicks: {}, supportGroupClicks: {},
+                sectionClicks: {}, recent: [], scrollDepth: {}, timeOnPage: {}, sessions: 0
+            };
+
+            var totalViews = 0;
+            Object.keys(data.pageViews || {}).forEach(function (p) { totalViews += data.pageViews[p]; });
+
+            var totalClicks = 0;
+            var clicksByPage = {};
+            Object.keys(data.linkClicks || {}).forEach(function (k) {
+                var c = data.linkClicks[k];
+                totalClicks += c.count;
+                clicksByPage[c.page] = (clicksByPage[c.page] || 0) + c.count;
+            });
+
+            var ctr = totalViews > 0 ? ((totalClicks / totalViews) * 100).toFixed(1) + '%' : '—';
+            var totalGroupClicks = 0;
+            Object.keys(data.supportGroupClicks || {}).forEach(function (k) {
+                totalGroupClicks += data.supportGroupClicks[k].total;
+            });
+
+            document.getElementById('summary').innerHTML =
+                card('Sessions', data.sessions || 0) +
+                card('Total page views', totalViews) +
+                card('Total link clicks', totalClicks) +
+                card('Overall CTR', ctr) +
+                card('Support group clicks', totalGroupClicks) +
+                card('Tracking since', data.firstSeen ? new Date(data.firstSeen).toLocaleDateString() : '—');
+
+            var pageRows = Object.keys(data.pageViews || {}).sort().map(function (p) {
+                var views = data.pageViews[p];
+                var clicks = clicksByPage[p] || 0;
+                var pageCtr = views > 0 ? ((clicks / views) * 100).toFixed(1) + '%' : '—';
+                var depth = (data.scrollDepth && data.scrollDepth[p]) || 0;
+                var time = (data.timeOnPage && data.timeOnPage[p]) || 0;
+                return '<tr><td>' + p + '</td><td>' + views + '</td><td>' + clicks + '</td><td>' + pageCtr + '</td><td>' + depth + '%</td><td>' + fmtMs(time) + '</td></tr>';
+            }).join('');
+            document.querySelector('#page-table tbody').innerHTML = pageRows || '<tr><td colspan="6">No data yet.</td></tr>';
+
+            var links = Object.values(data.linkClicks || {}).sort(function (a, b) { return b.count - a.count; });
+            var linkRows = links.slice(0, 50).map(function (l, i) {
+                return '<tr><td>' + (i + 1) + '</td><td>' + escapeHtml(l.text) + '</td><td>' + escapeHtml(l.href) + '</td><td>' + l.kind + '</td><td>' + escapeHtml(l.section || '') + '</td><td>' + l.page + '</td><td>' + l.count + '</td></tr>';
+            }).join('');
+            document.querySelector('#links-table tbody').innerHTML = linkRows || '<tr><td colspan="7">No clicks yet.</td></tr>';
+
+            var groups = Object.values(data.supportGroupClicks || {}).sort(function (a, b) { return b.total - a.total; });
+            var groupRows = groups.map(function (g, i) {
+                return '<tr><td>' + (i + 1) + '</td><td>' + escapeHtml(g.name) + '</td><td>' + escapeHtml(g.type || '') + '</td><td>' + g.calls + '</td><td>' + g.websiteClicks + '</td><td>' + g.total + '</td></tr>';
+            }).join('');
+            document.querySelector('#groups-table tbody').innerHTML = groupRows || '<tr><td colspan="6">No support group clicks yet. Open map.html and click a popup link.</td></tr>';
+
+            var sections = Object.keys(data.sectionClicks || {})
+                .map(function (k) { return { name: k, count: data.sectionClicks[k] }; })
+                .sort(function (a, b) { return b.count - a.count; });
+            document.querySelector('#sections-table tbody').innerHTML =
+                sections.map(function (s) { return '<tr><td>' + escapeHtml(s.name) + '</td><td>' + s.count + '</td></tr>'; }).join('')
+                || '<tr><td colspan="2">No section clicks yet.</td></tr>';
+
+            var recent = (data.recent || []).slice().reverse().slice(0, 50);
+            document.querySelector('#recent-table tbody').innerHTML =
+                recent.map(function (r) {
+                    return '<tr><td>' + fmtTime(r.ts) + '</td><td>' + r.page + '</td><td>' + r.kind + '</td><td>' + escapeHtml(r.groupName || r.text || r.name || '') + '</td><td>' + escapeHtml(r.href || '') + '</td></tr>';
+                }).join('') || '<tr><td colspan="5">No events yet.</td></tr>';
+        }
+
+        function card(label, value) {
+            return '<div class="stat-card"><div class="label">' + label + '</div><div class="value">' + value + '</div></div>';
+        }
+
+        function escapeHtml(s) {
+            return String(s == null ? '' : s)
+                .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+
+        document.getElementById('refresh-btn').addEventListener('click', render);
+        document.getElementById('export-btn').addEventListener('click', function () {
+            var raw = localStorage.getItem('fnosc_analytics_v1') || '{}';
+            var blob = new Blob([raw], { type: 'application/json' });
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            a.href = url;
+            a.download = 'fnosc-stats-' + new Date().toISOString().slice(0, 10) + '.json';
+            a.click();
+            URL.revokeObjectURL(url);
+        });
+        document.getElementById('reset-btn').addEventListener('click', function () {
+            if (confirm('Reset all local stats? This cannot be undone.')) {
+                localStorage.removeItem('fnosc_analytics_v1');
+                render();
+            }
+        });
+
+        render();
+    </script>
+</body>
+</html>
